@@ -17,7 +17,7 @@ import com.psb.exception.AWSS3ClientException;
 import com.psb.exception.AWSS3ClientNotFoundException;
 import com.psb.model.s3.S3Playlist;
 import com.psb.model.s3.S3User;
-import com.psb.util.Compresser;
+import com.psb.util.Decompresser;
 
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -50,19 +50,25 @@ public class AWSS3Client {
 		logger.info("S3 client closed.");
 	}
 
-	public ResponseBytes<GetObjectResponse> getPlaylist(String objectKey)
+	public S3Playlist getPlaylist(String objectKey)
 			throws AWSS3ClientException, AWSS3ClientNotFoundException {
 		try {
-			// LMAO java doesn't have import aliasing so one RequestBody must use the fully
-			// qualified name
+			logger.info("Getting playlist with object key {}", objectKey);
 			GetObjectRequest s3Request = GetObjectRequest.builder().bucket(bucketName).key(objectKey).build();
-			return s3.getObjectAsBytes(s3Request);
+			ResponseBytes<GetObjectResponse> objectBytes = s3.getObjectAsBytes(s3Request);
+			return (S3Playlist) SerializationUtils.deserialize(Decompresser.decompress(objectBytes.asByteArray()));
 		} catch (NoSuchKeyException e) {
 			throw new AWSS3ClientNotFoundException(
-					"Error getting object from s3: Ojbect key: " + objectKey + " does not exist");
+					"Error getting object from s3: Object key: " + objectKey + " does not exist");
 		} catch (Exception e) {
 			throw new AWSS3ClientException("Error getting object from s3\n" + e.getMessage());
 		}
+	}
+
+	public S3Playlist getPlaylist(String userID, String playlistID) throws AWSS3ClientException, AWSS3ClientNotFoundException {
+		String displayName = getDisplayName(userID + "/");
+		String playlistObjectKey = userID + delimiter + displayName + delimiter + playlistID;
+		return getPlaylist(playlistObjectKey);
 	}
 
 	public List<S3Playlist> getPlaylists(String userID) throws AWSS3ClientException, AWSS3ClientNotFoundException {
@@ -72,9 +78,9 @@ public class AWSS3Client {
 		List<S3Playlist> playlists = new ArrayList<>();
 
 		String prefix = userID + delimiter;
-		ListObjectsRequest listObjects = ListObjectsRequest.builder().bucket(bucketName).prefix(prefix).build();
+		ListObjectsRequest listObjectsRequest = ListObjectsRequest.builder().bucket(bucketName).prefix(prefix).build();
 
-		ListObjectsResponse res = s3.listObjects(listObjects);
+		ListObjectsResponse res = s3.listObjects(listObjectsRequest);
 		List<S3Object> objects = res.contents();
 		
 		if (objects.isEmpty()) {
@@ -82,10 +88,9 @@ public class AWSS3Client {
 					"Error getting object from s3: user: " + userID + " does not exist");
 		}
 
-		for (ListIterator<S3Object> iterVals = objects.listIterator(); iterVals.hasNext();) {
-			S3Object s3Object = iterVals.next();
-			ResponseBytes<GetObjectResponse> objectBytes = getPlaylist(s3Object.key());
-			S3Playlist playlist = (S3Playlist) SerializationUtils.deserialize(Compresser.decompress(objectBytes.asByteArray()));
+		for (ListIterator<S3Object> s3ObjectIterator = objects.listIterator(); s3ObjectIterator.hasNext();) {
+			String objectID = s3ObjectIterator.next().key();
+			S3Playlist playlist = getPlaylist(objectID);
 			logger.info("Found playlist {}", playlist.getPlaylist().getName());
 			playlists.add(playlist);
 		}
@@ -99,23 +104,20 @@ public class AWSS3Client {
 				.build();
 		try {
 			ListObjectsResponse objects = s3.listObjects(listObjectsRequest);
-			List<CommonPrefix> prefixes = objects.commonPrefixes();
-			return getDisplayNames(prefixes);
+			List<CommonPrefix> userIDPrefixes = objects.commonPrefixes();
+			return getS3Users(userIDPrefixes);
 
 		} catch (Exception e) {
 			throw new AWSS3ClientException("Error getting object from s3\n" + e.getMessage());
 		}
 	}
 	
-	private List<S3User> getDisplayNames(List<CommonPrefix> userIDs){
+	private List<S3User> getS3Users(List<CommonPrefix> userIDPrefixes) throws AWSS3ClientNotFoundException {
 		List<S3User> users = new ArrayList<>();
-		for (CommonPrefix userID : userIDs) {
-			String idPrefix = userID.prefix();
-			ListObjectsRequest listObjectsRequest = ListObjectsRequest.builder().bucket(bucketName).delimiter(delimiter).prefix(idPrefix)
-					.build();
-			ListObjectsResponse objects = s3.listObjects(listObjectsRequest);
-			String displayName = getDisplayName(objects.commonPrefixes().get(0).prefix());
-			String id = idPrefix.substring(0, idPrefix.indexOf(delimiter));
+		for (CommonPrefix userIDPrefix : userIDPrefixes) {
+			String userID = userIDPrefix.prefix();
+			String displayName = getDisplayName(userID);
+			String id = userID.substring(0, userID.indexOf(delimiter));
 			S3User user = new S3User();
 			logger.info("Got user with display name {}", displayName);
 			user.setDisplayName(displayName);
@@ -125,7 +127,19 @@ public class AWSS3Client {
 		return users;
 	}
 	
-	private String getDisplayName(String fullPrefix) {
+	private String getDisplayName(String userID) throws AWSS3ClientNotFoundException {
+		// prefix must end with / we will add it if it doesn't already have one
+		if (userID.charAt(userID.length() -1) != delimiter.charAt(0)){
+			userID += delimiter;
+		}
+		ListObjectsRequest listObjectsRequest = ListObjectsRequest.builder().bucket(bucketName).delimiter(delimiter).prefix(userID)
+				.build();
+		ListObjectsResponse objects = s3.listObjects(listObjectsRequest);
+		if (objects.commonPrefixes().isEmpty()) {
+			throw new AWSS3ClientNotFoundException(
+					"Error getting object from s3: user: " + userID + " does not exist");
+		}
+		String fullPrefix = objects.commonPrefixes().get(0).prefix();
 		return fullPrefix.substring(fullPrefix.indexOf(delimiter)+1, fullPrefix.length()-1);
 	}
 

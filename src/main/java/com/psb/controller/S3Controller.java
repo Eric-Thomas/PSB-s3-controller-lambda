@@ -24,10 +24,16 @@ public class S3Controller {
 		this.s3Client = s3Client;
 	}
 	
-	@GetMapping(path = "/load/users/{id}/playlists")
-	public List<S3Playlist> loadPlaylists(@PathVariable String id) throws AWSS3ClientException, AWSS3ClientNotFoundException {
-		return s3Client.getPlaylists(id);
+	@GetMapping(path = "/load/users/{userID}/playlists")
+	public List<S3Playlist> loadPlaylists(@PathVariable String userID) throws AWSS3ClientException, AWSS3ClientNotFoundException {
+		return s3Client.getPlaylists(userID);
 		
+	}
+
+	@GetMapping(path = "/load/users/{userID}/playlists/{playlistID}")
+	public S3Playlist loadPlaylists(@PathVariable String userID, @PathVariable String playlistID)
+			throws AWSS3ClientException, AWSS3ClientNotFoundException {
+		return s3Client.getPlaylist(userID, playlistID);
 	}
 	
 	@GetMapping(path = "/load/users")
