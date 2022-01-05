@@ -1,6 +1,7 @@
 package com.psb.controller;
 
 import com.psb.exception.AWSS3ClientNotFoundException;
+import com.psb.exception.LimitTooHighException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -24,5 +25,12 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 		ExceptionResponse res = new ExceptionResponse("Error calling S3 404 Not Found. " + ex.getMessage(),
 				HttpStatus.NOT_FOUND);
 		return new ResponseEntity<>(res, HttpStatus.NOT_FOUND);
+	}
+
+	@ExceptionHandler(value = { LimitTooHighException.class })
+	protected ResponseEntity<Object> handleLimitTooHighException(LimitTooHighException ex) {
+		ExceptionResponse res = new ExceptionResponse(ex.getMessage(),
+				HttpStatus.BAD_REQUEST);
+		return new ResponseEntity<>(res, HttpStatus.BAD_REQUEST);
 	}
 }

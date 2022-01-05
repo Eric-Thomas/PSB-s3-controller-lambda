@@ -3,14 +3,15 @@ package com.psb.controller;
 import com.psb.client.AWSS3Client;
 import com.psb.exception.AWSS3ClientException;
 import com.psb.exception.AWSS3ClientNotFoundException;
+import com.psb.exception.LimitTooHighException;
 import com.psb.model.s3.S3Playlist;
+import com.psb.model.s3.S3Playlists;
 import com.psb.model.s3.S3User;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -25,9 +26,10 @@ public class S3Controller {
 	}
 	
 	@GetMapping(path = "/load/users/{userID}/playlists")
-	public List<S3Playlist> loadPlaylists(@PathVariable String userID) throws AWSS3ClientException, AWSS3ClientNotFoundException {
-		return s3Client.getPlaylists(userID);
-		
+	public S3Playlists loadPlaylists(@PathVariable String userID,
+									 @RequestParam(value="limit", defaultValue = "10") int limit, @RequestParam(defaultValue = "0") int offset)
+			throws AWSS3ClientException, AWSS3ClientNotFoundException, LimitTooHighException {
+		return s3Client.getPlaylists(userID, limit, offset);
 	}
 
 	@GetMapping(path = "/load/users/{userID}/playlists/{playlistID}")

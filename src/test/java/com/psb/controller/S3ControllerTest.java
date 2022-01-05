@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
+import com.psb.exception.LimitTooHighException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ class S3ControllerTest {
 
 	@Test
 	void testLoadPlaylists() throws Exception {
-		when(s3Client.getPlaylists(Mockito.anyString())).thenReturn(s3Util.createTestPlaylists());
+		when(s3Client.getPlaylists(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt())).thenReturn(s3Util.createTestS3Playlists());
 		this.mockMvc
 				.perform(MockMvcRequestBuilders.get(S3_LOAD_PLAYLISTS_URL).accept(MediaType.APPLICATION_JSON)
 						.contentType(MediaType.APPLICATION_JSON))
@@ -54,7 +55,7 @@ class S3ControllerTest {
 
 	@Test
 	void testLoadPlaylistsError() throws Exception {
-		when(s3Client.getPlaylists(Mockito.anyString())).thenThrow(new AWSS3ClientException(ERROR_MESSAGE));
+		when(s3Client.getPlaylists(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt())).thenThrow(new AWSS3ClientException(ERROR_MESSAGE));
 		this.mockMvc
 				.perform(MockMvcRequestBuilders.get(S3_LOAD_PLAYLISTS_URL).accept(MediaType.APPLICATION_JSON)
 						.contentType(MediaType.APPLICATION_JSON))
@@ -65,7 +66,7 @@ class S3ControllerTest {
 
 	@Test
 	void testLoadPlaylistsUserNotFound() throws Exception {
-		when(s3Client.getPlaylists(Mockito.anyString())).thenThrow(new AWSS3ClientNotFoundException(ERROR_MESSAGE));
+		when(s3Client.getPlaylists(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt())).thenThrow(new AWSS3ClientNotFoundException(ERROR_MESSAGE));
 		this.mockMvc
 				.perform(MockMvcRequestBuilders.get(S3_LOAD_PLAYLISTS_URL).accept(MediaType.APPLICATION_JSON)
 						.contentType(MediaType.APPLICATION_JSON))
@@ -94,6 +95,16 @@ class S3ControllerTest {
 						.contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isServiceUnavailable())
 				.andExpect(content().string(containsString("Error calling S3. Try again later")))
+				.andExpect(content().string(containsString(ERROR_MESSAGE)));
+	}
+
+	@Test
+	void testLimitTooHighException() throws Exception {
+		when(s3Client.getPlaylists(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt())).thenThrow(new LimitTooHighException(ERROR_MESSAGE));
+		this.mockMvc
+				.perform(MockMvcRequestBuilders.get(S3_LOAD_PLAYLISTS_URL).accept(MediaType.APPLICATION_JSON)
+						.contentType(MediaType.APPLICATION_JSON).param("limit", "100"))
+				.andExpect(status().isBadRequest())
 				.andExpect(content().string(containsString(ERROR_MESSAGE)));
 	}
 

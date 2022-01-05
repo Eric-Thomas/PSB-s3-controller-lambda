@@ -51,7 +51,7 @@ class AWSS3ClientTest {
 		// listObjects.contents() will return an empty list
 		when(s3.listObjects(Mockito.any(ListObjectsRequest.class))).thenReturn(listObjects);
 		assertThrows(AWSS3ClientNotFoundException.class, () -> {
-			s3Client.getPlaylists("Non existant user");
+			s3Client.getPlaylists("Non existant user", 10, 0);
 		});
 	}
 	

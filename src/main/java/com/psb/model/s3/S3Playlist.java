@@ -10,12 +10,7 @@ import java.io.Serializable;
 public class S3Playlist implements Serializable {
 	
 	private static final long serialVersionUID = 4111762650686114692L;
-	
-	public S3Playlist(SpotifyPlaylist playlist, SpotifyTracks tracks) {
-		this.playlist = playlist;
-		this.tracks = tracks;
-	}
-	
+
 	SpotifyPlaylist playlist;
 	SpotifyTracks tracks;
 
