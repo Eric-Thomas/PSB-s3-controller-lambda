@@ -21,7 +21,7 @@ Resources:
         HttpApiEvent:
           Type: HttpApi
           Properties:
-            TimeoutInMillis: 20000
+            TimeoutInMillis: 30000
             PayloadFormatVersion: '1.0'
 
 Outputs:
