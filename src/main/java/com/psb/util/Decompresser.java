@@ -1,18 +1,17 @@
 package com.psb.util;
 
 import java.io.ByteArrayOutputStream;
-import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // yoinked from https://stackoverflow.com/questions/51332314/java-byte-array-compression
-public class Compresser {
+public class Decompresser {
 	
-	private static Logger logger = LoggerFactory.getLogger(Compresser.class);
+	private static Logger logger = LoggerFactory.getLogger(Decompresser.class);
 
-	private Compresser() {
+	private Decompresser() {
 		throw new IllegalStateException("Static utility class should not be instantiated");
 	}
 
