@@ -94,10 +94,10 @@ public class AWSS3Client {
 			throw new AWSS3ClientNotFoundException(
 					"Error getting object from s3: user: " + userID + " does not exist");
 		}
+		S3Playlists playlists = new S3Playlists();
+		playlists.setPlaylists(new ArrayList<>());
 		try {
 			ListIterator<S3Object> s3ObjectIterator = objects.subList(offset, objects.size()).listIterator();
-			S3Playlists playlists = new S3Playlists();
-			playlists.setPlaylists(new ArrayList<>());
 			while (s3ObjectIterator.hasNext() && playlists.getPlaylists().size() < limit) {
 				String objectID = s3ObjectIterator.next().key();
 				S3Playlist playlist = getPlaylist(objectID);
@@ -116,8 +116,8 @@ public class AWSS3Client {
 			}
 
 			return playlists;
-		} catch (IndexOutOfBoundsException e){
-			return new S3Playlists();
+		} catch (IllegalArgumentException e){
+			return playlists;
 		}
 	}
 
